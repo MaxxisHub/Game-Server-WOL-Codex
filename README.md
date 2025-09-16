@@ -1,102 +1,106 @@
-WOL Proxy für Game-Server (Minecraft & Satisfactory)
+# WOL Proxy for Game Servers (Minecraft & Satisfactory)
 
-Überblick
-- Ziel: Ein leichtgewichtiger, robuster WOL-Proxy für ARM‑Single‑Board‑Computer (z. B. ASUS Tinker Board S mit Armbian), der die IP deines Game-Servers übernimmt, Anfragen auf Minecraft/Satisfactory abfängt, bei Bedarf per Wake‑on‑LAN (WOL) den eigentlichen Game‑Server startet und die IP wieder freigibt.
-- Verhalten:
-  - Wenn der Game‑Server aus ist: Das Board übernimmt dessen IP und lauscht auf den konfigurierten Ports.
-  - Satisfactory: Startet den Server bereits, wenn die Serverliste geöffnet wird (UDP‑Anfrage erkannt).
-  - Minecraft: Startet erst bei einem echten Join‑Versuch. In der Serverliste wird ein konfigurierbares MOTD angezeigt (z. B. „Join to start Server“). Nach einem Join‑Versuch wechselt das MOTD zu „Starting…“. Der Client erhält beim Join einen freundlichen Hinweis: „Server is starting please try again in 60 seconds“.
-  - Nach dem Senden des WOL‑Pakets wird die IP sofort wieder freigegeben, damit der echte Game‑Server sie übernehmen kann.
-  - Während der echte Game‑Server läuft, pingt der Proxy zyklisch. Fällt der Server später wieder aus, übernimmt das Board erneut die IP und lauscht wieder.
-- Ressourcen: Minimal (Python 3, keine externen Python‑Abhängigkeiten), läuft als systemd‑Service.
+## Overview
+- Goal: Lightweight, robust WOL proxy for ARM single-board computers (e.g. ASUS Tinker Board S with Armbian) that temporarily takes over the IP of your real game server, intercepts Minecraft/Satisfactory traffic, wakes the real server via Wake-on-LAN, and hands the IP back once the host is up.
+- Behaviour:
+  - When the real server is down: the board takes over the server IP and listens on the configured ports.
+  - Satisfactory: wakes the server as soon as the server browser triggers a UDP query.
+  - Minecraft: wakes only after a real join attempt. The proxy shows a configurable MOTD (for example `Join to start Server`). When a join packet is seen the MOTD switches to `Starting`. Clients are disconnected with a friendly message: `Server is starting, please try again in 60 seconds`.
+  - After sending the WOL packet the IP is released immediately so the real server can claim it.
+  - While the real server is running, the proxy pings periodically. If the server later goes down, the board takes over the IP again and resumes listening.
+- Resources: Minimal (Python 3, no third-party Python deps), ships with a systemd service.
 
-Features
-- IP‑Übernahme via `ip addr add/del` und ARP‑Ankündigung (`arping`) für sauberen Failover.
-- Wake‑on‑LAN Magic Packet (Broadcast) mit MAC aus der Konfiguration.
-- Minimaler Minecraft‑Protokoll‑Support für Status/Handshake/Login‑Disconnect, um MOTD/Version zu setzen und Join‑Versuche sauber abzufangen.
-- Satisfactory‑Trigger über UDP‑Ports (Default 15000/15777/7777). Bereits eine Anfrage startet den Server.
-- Automatische Erkennung des Netzwerk‑Interfaces für die Ziel‑IP.
-- Einfache Web‑Ersteinrichtung (lokale Mini‑GUI) auf Port 8090, wenn keine Konfiguration vorhanden ist.
-- systemd‑Service für Autostart nach Powerloss.
+## Features
+- IP takeover via `ip addr add/del` and ARP announcement (`arping`) for clean failover.
+- Wake-on-LAN magic packet broadcast using the configured MAC address.
+- Minimal Minecraft protocol support for status/handshake/login-disconnect to expose MOTDs and block joins gracefully.
+- Satisfactory trigger over UDP ports (default 15000/15777/7777). Any query starts the server.
+- Automatic detection of the network interface for the target IP.
+- Simple first-run web UI (local mini GUI) on port 8090 when no configuration is present.
+- systemd unit for automatic start after a power loss.
 
-Unterstützte Plattform
-- Getestet für Armbian/Debian‑ähnliche Systeme auf ARM‑SBCs (z. B. ASUS Tinker Board S). Sollte generell auf Linux funktionieren.
+## Supported Platforms
+- Tested on Armbian/Debian-like systems running on ARM SBCs (e.g. ASUS Tinker Board S). Should generally work on Linux.
 
-Schnellstart
-1) Installation
-   - Voraussetzungen: Root/Rechte für systemd, Internet für Paketinstallation.
-   - Klone dieses Repo auf dein Board und installiere:
+## Quickstart
+1. Installation
+   - Requirements: root/systemd privileges, internet access for package installation, Git.
+   - Clone and install:
      ```bash
      git clone https://github.com/MaxxisHub/Game-Server-WOL-Codex.git
-     cd wol-proxy
+     cd Game-Server-WOL-Codex
+     chmod +x install.sh
      sudo ./install.sh
      ```
+     > **Note:** Run the installer from the repository root. If you renamed the folder, adjust the `cd` command accordingly.
 
-2) Ersteinrichtung (Terminal‑Setup)
-   - Nach der Installation startet automatisch ein Terminal‑Wizard (curses‑TUI) zur Ersteinrichtung.
-   - Alternativ jederzeit manuell ausführen:
+2. Initial setup (terminal wizard)
+   - After installation a curses TUI starts automatically.
+   - Run manually at any time:
      ```bash
      sudo wol-proxy-setup
      ```
-   - Eingaben:
-     - Game‑Server IP (z. B. 192.168.1.50) und MAC (WOL)
-     - Minecraft‑Port (Default 25565) und MOTD‑Texte
-     - Satisfactory‑Ports (Default 15000/15777/7777)
-     - Optional: CIDR automatisch erkennen (Taste „D“) oder manuell festlegen
-   - Nach dem Speichern übernimmt der Dienst automatisch die Konfiguration.
+   - You will be asked for:
+     - Game server IP (e.g. 192.168.1.50) and MAC (for WOL)
+     - Minecraft port (default 25565) and MOTD texts
+     - Satisfactory ports (default 15000/15777/7777)
+     - Optional: Detect CIDR automatically (press `d`) or provide manually
+   - Saving the wizard writes `/opt/wol-proxy/config.json` and restarts the daemon.
 
-3) Service steuern
+3. Manage the service
    ```bash
    sudo systemctl status wol-proxy
    sudo systemctl restart wol-proxy
    sudo journalctl -u wol-proxy -f
    ```
 
-Konfiguration
-- Datei: `/opt/wol-proxy/config.json` (wird über die GUI erzeugt/aktualisiert). Beispiel:
-```json
-{
-  "game_server_ip": "192.168.1.50",
-  "game_server_mac": "AA:BB:CC:DD:EE:FF",
-  "net_cidr": 24,
-  "mc_port": 25565,
-  "mc_motd_idle": "Join to start Server",
-  "mc_motd_starting": "Starting...",
-  "mc_version_label": "Offline",
-  "satisfactory_ports": [15000, 15777, 7777],
-  "ping_interval_sec": 3,
-  "ping_fail_threshold": 10
-}
-```
-- `net_cidr` wird in der Regel automatisch ermittelt. Bei Spezial‑Setups ggf. anpassen.
+## Configuration
+- File: `/opt/wol-proxy/config.json` (created/updated by the wizard). Example:
+  ```json
+  {
+    "game_server_ip": "192.168.1.50",
+    "game_server_mac": "AA:BB:CC:DD:EE:FF",
+    "net_cidr": 24,
+    "mc_port": 25565,
+    "mc_motd_idle": "Join to start Server",
+    "mc_motd_starting": "Starting...",
+    "mc_version_label": "Offline",
+    "satisfactory_ports": [15000, 15777, 7777],
+    "ping_interval_sec": 3,
+    "ping_fail_threshold": 10
+  }
+  ```
+- `net_cidr` is usually detected automatically. Adjust for exotic networks if required.
 
-Funktionsweise (High‑Level)
-- Boot → Service startet → Falls `config.json` fehlt, wartet der Dienst auf eine Konfiguration. TUI starten mit `sudo wol-proxy-setup`.
-- Mit Konfiguration:
-  - Prüfe, ob der echte Game‑Server erreichbar ist (Ping/TCP‑Check). Wenn nein:
-    - Übernehme dessen IP (als Secondary auf dem gefundenen Interface) und kündige per ARP an.
-    - Starte Listener:
-      - Minecraft TCP auf `mc_port`: antwortet auf Status‑Pings mit MOTD/Version, triggert bei Login‑Start WOL, sendet freundliche Disconnect‑Nachricht und gibt IP sofort frei.
-      - Satisfactory UDP auf konfigurierten Ports: jeder eingehende Query triggert WOL und gibt IP sofort frei.
-  - Während „Startphase“ wird regelmäßig geprüft, ob der echte Server läuft. Sobald er erreichbar ist, bleibt die IP freigegeben und der Proxy lauscht nicht mehr.
-  - Fällt der Server später wieder aus (mehrere Pings fehlgeschlagen): IP erneut übernehmen und Proxies starten.
+## How It Works
+1. systemd starts the daemon.
+2. If `config.json` is missing the daemon waits for configuration (start the TUI with `sudo wol-proxy-setup`).
+3. With configuration present:
+   - Check if the real game server is reachable (ping/TCP).
+   - If not reachable:
+     - Take over the server IP (secondary address) on the detected interface and announce via ARP.
+     - Start listeners:
+       - Minecraft TCP: replies to status pings with MOTD/version, triggers WOL on login attempts, disconnects the client politely, releases the IP immediately.
+       - Satisfactory UDP: any query triggers WOL and releases the IP immediately.
+   - While in the starting phase the daemon polls until the real server is up. Once reachable the proxy stays idle and the IP remains released.
+   - If the server later goes down (consecutive ping failures) the proxy reclaims the IP and resumes listening.
 
-Sicherheit & Hinweise
-- Der Dienst verwaltet IP‑Adressen und lauscht auf privilegierten Ports → läuft als root. Code ist minimal gehalten und protokolliert Aktionen.
-- Wake‑on‑LAN setzt WOL‑Support im BIOS/NIC des Game‑Servers voraus.
-- IP‑Übernahme setzt voraus, dass der Game‑Server wirklich aus ist, um Doppelbelegung zu vermeiden.
+## Security & Notes
+- The daemon manages IP addresses and privileged ports; it must run as root. Code is minimal and logs key actions.
+- Wake-on-LAN requires BIOS/NIC support on the game server.
+- Ensure the real server is powered off when taking over the IP to avoid conflicts.
 
-Deinstallation
+## Uninstall
 ```bash
 sudo ./uninstall.sh
 ```
 
-Entwicklung
-- Code in `src/wol_proxy`. Keine externen Python‑Abhängigkeiten.
-- Starte lokal (nicht als Service) für Tests:
+## Development
+- Source code lives in `src/wol_proxy`. No external Python dependencies.
+- Run locally (without systemd) for tests:
   ```bash
   sudo python3 -m src.wol_proxy.main --foreground --config ./config.json
   ```
 
-Lizenz
-- Bitte nach Bedarf ergänzen. Standardmäßig ohne Lizenz.
+## License
+- Add a license if required. Currently unlicensed.

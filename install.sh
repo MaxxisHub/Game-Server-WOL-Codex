@@ -28,7 +28,7 @@ ln -sf "${BIN_DIR}/wol-proxy-setup" /usr/local/bin/wol-proxy-setup
 
 echo "[3/6] Running first-time terminal setup"
 if [[ ! -f "/opt/${APP_NAME}/config.json" ]]; then
-  /usr/bin/env python3 /opt/${APP_NAME}/src/wol_proxy/setup_tui.py || true
+  /usr/bin/env PYTHONPATH="/opt/${APP_NAME}/src" python3 -m wol_proxy.setup_tui || true
 fi
 
 echo "[4/6] Installing systemd service"

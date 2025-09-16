@@ -2,9 +2,11 @@
 set -euo pipefail
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-  echo "Bitte als root ausführen: sudo wol-proxy-setup" >&2
+  echo "Please run as root: sudo wol-proxy-setup" >&2
   exit 1
 fi
 
-exec /usr/bin/env python3 /opt/wol-proxy/src/wol_proxy/setup_tui.py "$@"
+APP_DIR="/opt/wol-proxy"
+PY_PATH="${APP_DIR}/src"
 
+exec /usr/bin/env PYTHONPATH="${PY_PATH}" python3 -m wol_proxy.setup_tui "$@"

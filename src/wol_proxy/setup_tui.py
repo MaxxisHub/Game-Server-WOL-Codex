@@ -3,11 +3,18 @@ import curses
 import os
 import re
 import sys
+from pathlib import Path
 from typing import List
 
-from .config import Config, save_config, DEFAULT_CONFIG_PATH
-from .arp_manager import IPManager
-from .util import log
+try:
+    from .config import Config, save_config, DEFAULT_CONFIG_PATH
+    from .arp_manager import IPManager
+    from .util import log
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from wol_proxy.config import Config, save_config, DEFAULT_CONFIG_PATH
+    from wol_proxy.arp_manager import IPManager
+    from wol_proxy.util import log
 
 
 FIELDS = [
@@ -230,4 +237,5 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
 

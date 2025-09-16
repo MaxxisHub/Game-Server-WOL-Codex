@@ -27,7 +27,7 @@ Schnellstart
    - Voraussetzungen: Root/Rechte für systemd, Internet für Paketinstallation.
    - Klone dieses Repo auf dein Board und installiere:
      ```bash
-     git clone https://github.com/<dein-account>/wol-proxy.git
+     git clone https://github.com/MaxxisHub/Game-Server-WOL-Codex.git
      cd wol-proxy
      sudo ./install.sh
      ```

@@ -108,12 +108,21 @@ class ProxyManager:
 
     def _trigger_start(self, reason: str):
         log(f"Start trigger: {reason}")
+        broadcasts = []
         try:
-            import ipaddress
-            bcast = str(ipaddress.ip_network(f"{self.cfg.game_server_ip}/{self.cfg.net_cidr}", strict=False).broadcast_address)
-            send_magic_packet(self.cfg.game_server_mac, broadcast=bcast)
+            broadcasts.extend(self.ipm.get_broadcasts())
         except Exception as e:
-            log(f"WOL error: {e}")
+            log(f"Failed to determine broadcast addresses: {e}")
+        broadcasts.append("255.255.255.255")
+        seen = set()
+        for addr in broadcasts:
+            if not addr or addr in seen:
+                continue
+            seen.add(addr)
+            try:
+                send_magic_packet(self.cfg.game_server_mac, broadcast=addr)
+            except Exception as exc:
+                log(f"WOL error via {addr}: {exc}")
         self._motd_state = "starting"
         self.state = "STARTING"
         # Release IP and stop listeners immediately to free the ports

@@ -56,16 +56,15 @@ class ProxyManager:
                 else:
                     self._fail_count += 1
                     self._ok_count = 0
-                    # Server seems down (only act after threshold to avoid flapping)
-                    if self._fail_count >= max(1, self.cfg.ping_fail_threshold):
-                        if self.state != "STARTING":
-                            await self._ensure_claimed_and_listening()
-                            if self.state != "OFFLINE":
-                                log("State OFFLINE (proxy active)")
-                                self.state = "OFFLINE"
-                        else:
-                            # STARTING: Wait until server becomes reachable
-                            pass
+                    threshold = max(1, self.cfg.ping_fail_threshold)
+                    should_takeover = self.state in ("INIT", "OFFLINE") or self._fail_count >= threshold
+                    if self.state == "STARTING":
+                        should_takeover = False
+                    if should_takeover:
+                        await self._ensure_claimed_and_listening()
+                        if self.state != "OFFLINE":
+                            log("State OFFLINE (proxy active)")
+                            self.state = "OFFLINE"
             except Exception as e:
                 log(f"Main loop error: {e}")
             await asyncio.sleep(self.cfg.ping_interval_sec)
@@ -91,6 +90,7 @@ class ProxyManager:
 
     async def _ensure_claimed_and_listening(self):
         self.ipm.claim_ip()
+        self._motd_state = "idle"
         # Start proxies if not running
         if self.mc_proxy is None:
             self.mc_proxy = MCProxy(

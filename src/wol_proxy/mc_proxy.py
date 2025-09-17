@@ -104,7 +104,9 @@ class MCProxy:
             if next_state == 1:
                 # Status flow
                 # Read status request packet (should be id=0x00 with empty payload)
-                _ = await _read_varint_from_stream(reader)
+                req_len = await _read_varint_from_stream(reader)
+                if req_len:
+                    await reader.readexactly(req_len)
                 # Build status response
                 status = self.get_status(proto_ver)
                 resp_json = json.dumps(status, ensure_ascii=False)
@@ -132,7 +134,7 @@ class MCProxy:
                 # Trigger WOL
                 self.on_join_attempt(f"login from {addr}")
                 # Send disconnect with message
-                msg_json = json.dumps({"text": "Server is starting please try again in 60 seconds"})
+                msg_json = json.dumps({"text": "Server is starting please try again in 60 seconds"}, ensure_ascii=False)
                 payload = _encode_varint(0x00) + _encode_string(msg_json)
                 pkt = _encode_varint(len(payload)) + payload
                 writer.write(pkt)

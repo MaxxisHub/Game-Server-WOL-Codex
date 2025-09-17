@@ -80,6 +80,10 @@ class IPManager:
         self._claimed = False
         log(f"Released IP {self.target_ip}/{self.cidr} from {self.iface}")
 
+    def is_claimed(self) -> bool:
+        """Return True if the proxy currently owns the target IP."""
+        return self._claimed
+
     def get_broadcasts(self) -> List[str]:
         if not self.broadcasts:
             if self.iface is None or self.cidr is None:

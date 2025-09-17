@@ -72,7 +72,12 @@ class ProxyManager:
 
     def _is_server_up(self) -> bool:
         # Prefer ping
-        return ping_host(self.cfg.game_server_ip, timeout_sec=max(1, self.cfg.ping_interval_sec))
+        if self.ipm.is_claimed():
+            return False
+        success = ping_host(self.cfg.game_server_ip, timeout_sec=max(1, self.cfg.ping_interval_sec))
+        if not success and self.state != 'STARTING':
+            log("Ping failed, treating server as offline")
+        return success
 
     async def _ensure_released(self):
         # stop proxies, release IP

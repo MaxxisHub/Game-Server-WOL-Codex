@@ -1,14 +1,24 @@
 import argparse
 import asyncio
 import os
+from pathlib import Path
  
 
-from .arp_manager import IPManager
-from .config import Config, load_config, save_config, DEFAULT_CONFIG_PATH
-from .mc_proxy import MCProxy
-from .satisfactory_proxy import SatisfactoryProxy
-from .util import log, ping_host
-from .wol import send_magic_packet
+try:
+    from .arp_manager import IPManager
+    from .config import Config, load_config, save_config, DEFAULT_CONFIG_PATH
+    from .mc_proxy import MCProxy
+    from .satisfactory_proxy import SatisfactoryProxy
+    from .util import log, ping_host
+    from .wol import send_magic_packet
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from wol_proxy.arp_manager import IPManager
+    from wol_proxy.config import Config, load_config, save_config, DEFAULT_CONFIG_PATH
+    from wol_proxy.mc_proxy import MCProxy
+    from wol_proxy.satisfactory_proxy import SatisfactoryProxy
+    from wol_proxy.util import log, ping_host
+    from wol_proxy.wol import send_magic_packet
 
 
 """
